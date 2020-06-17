@@ -1,6 +1,8 @@
 # HomeBridge Plugin Development Tutorial
 
-## introduction
+Click YouTube Thumnail to watch tutorial videos in each section.
+
+## Introduction
 [![Tutorial #0 Video](http://img.youtube.com/vi/nWVQgxRgydY/0.jpg)](https://www.youtube.com/watch?v=nWVQgxRgydY "Tutorial #0 Video")
 
 Before going further please,
@@ -8,5 +10,5 @@ Before going further please,
 * Install [Homebridge](http://homebridge.io) on your preferred computer; i.e. Mac, PC, or Raspberry pi
 * Add homebridge to your HomeKit
 
-## bringing up plugin and adding accessory
+## Bringing up plugin and adding an accessory
 To be updated
