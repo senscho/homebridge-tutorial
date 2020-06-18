@@ -37,7 +37,7 @@ module.exports = function (homebridge) {
 function volume(log, config, api) {
     this.log = log;
     this.config = config;
-    this.api = api;
+    this.homebridge = api;
 
     if (this.config.defaultVolume)
         this.defaultVolume = this.config.defaultVolume;
