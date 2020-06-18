@@ -48,3 +48,35 @@ sudo npm link
 ```
 
 Refresh your homebridge config web interface. Plugin should be found there.
+
+**Adding an accessory**
+
+When homebridge code calls our module it passes itself. We added an argument of our function called 'homebridge' to recieve it. Note that name can be anything.
+
+Now with homebridge object, we can call homebridge related function so we call homebridge object an API (application programming interface).
+
+To add an accessory, call registerAccessory function of homebridge object as shown in the example below.
+
+```js
+module.exports = function (homebridge) {
+    /*
+        API.registerAccessory(PluginIdentifier,
+            AccessoryName, AccessoryPluginConstructor)
+    */
+   homebridge.registerAccessory("homebridge-tutorial",
+            "SensMan Volume", volume); 
+};
+```
+When we call this API function, homebridge wants to know which plugin is calling it. That is why it requires the first argument to be the plugin name. Second argument is accessory name and it can be anything. In many homekit products, it is usually the product name. The last one is called a constructor. Constructor is what we will define and it is the core of our accessory.
+
+Now save index.js and restart homebridge then print out the log.
+```
+$ sudo hb-service restart <- restart homebridge
+$ hb-service logs <- see logs. Ctrl+C to stop
+```
+
+This will print out some error because we have not defined the constructor. And it is proof that our plugin is loaded by homebridge. So we made a progress
+```
+[6/18/2020, 2:49:59 AM] ERROR INITIALIZING PLUGIN homebridge-tutorial:
+[6/18/2020, 2:49:59 AM] ReferenceError: volume is not defined ...
+```
