@@ -98,15 +98,6 @@ function volume(log, config, api) {
     this.log('defaultVolume is ' + this.defaultVolume);
 };
 ```
-Homebridge will call our constructor for each accessory. It also calls getServices to know what devices are included in my accessory. For example, despite of the accessory name, SensMan Volume may contain a lightbulb.
-
-We have to define getServices function like below. Currently, we do not return any service, which means that there will be no actual device showing in homekit.
-
-```js
-volume.prototype = {
-    getServices: function() {}
-}
-```
 After adding this code, restarting homebrdige won't generate errors. Instead it says
 ```
 [6/18/2020, 3:42:07 AM] Loaded plugin: homebridge-tutorial@0.0.1
@@ -128,7 +119,15 @@ Add accessories in config.json file, which is homebridge's configuration file. P
         }
     ]
 ```
+Homebridge will call our constructor for each accessory. It also calls getServices to know what devices are included in my accessory. For example, despite of the accessory name, SensMan Volume may contain a lightbulb and a fan.
 
+We have to define getServices function like below. Currently, we do not return any service, which means that there will be no actual device showing in homekit.
+
+```js
+volume.prototype = {
+    getServices: function() {}
+}
+```
 
 When homebridge calls our constructor. It passes three variables. The first one is log. Using this object, my plugin can write into homebridge's log file. Second one is configuration file. In case of above example, "defaultVolume: 90" is passed by this variable. Last one is again the homebridge object itself.
 
