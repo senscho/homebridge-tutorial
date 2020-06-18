@@ -82,6 +82,7 @@ This will print out some error because we have not defined the constructor. And 
 ```
 
 **Constructor Definition**
+
 ```js
 function volume(log, config, api) {
     this.log = log;
@@ -103,6 +104,7 @@ After adding this code, restarting homebrdige won't generate errors. Instead it 
 [6/18/2020, 3:42:07 AM] Registering accessory 'homebridge-tutorial.SensMan Volume'
 ```
 **Create Accessory Instances**
+
 Add accessories in config.json file, which is homebridge's configuration file. Please properly use the commas not to get any errors.
 ```json
 "accessories": [
@@ -120,6 +122,7 @@ Add accessories in config.json file, which is homebridge's configuration file. P
 Homebridge will call our constructor for each accessory. It also calls getServices to know what devices are included in my accessory. For example, despite of the accessory name, SensMan Volume may contain a lightbulb and a fan.
 
 We have to define getServices function like below. Currently, we do not return any service, which means that there will be no actual device showing in homekit.
+
 ```js
 volume.prototype = {
     getServices: function() {}
@@ -146,6 +149,7 @@ Lastly, prints out some strings in log file. What do you expect to see from the 
 So far, our code had nothing to do with Homekit. The real homekit thing is here called service. Let's add a lightbulb service in our plugin.
 
 **Adding a lightbulb Service**
+
 Now we will add lightbulb Service in Constructor function. Before moving on let's define some useful global variables for convenience. Service and Characteristic objects are two key objects that we will be frequently using so I am giving them short names. Put the following code right after "use strict";
 
 ```js
