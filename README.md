@@ -3,7 +3,7 @@
 Click YouTube Thumbnail to watch tutorial videos in each section. Note that I am not an NodeJS expert. In fact, I just learned from other peoples code for this project. Any error correction / feedback are welcome.
 
 ## Introduction
-[![Tutorial #0 Video](http://img.youtube.com/vi/nWVQgxRgydY/0.jpg)](https://www.youtube.com/watch?v=nWVQgxRgydY "Tutorial #0 Video")
+[Tutorial Video #1 Introduction (Korean Language)](https://www.youtube.com/watch?v=nWVQgxRgydY)
 
 Before going further please,
 * Make sure that you have an iPhone
@@ -11,6 +11,7 @@ Before going further please,
 * Add homebridge to your HomeKit
 
 ## Bringing up plugin and adding an accessory
+[Tutorial Video #2 HandsOn: Adding an Accessory to Homekit (Korean Language)](https://www.youtube.com/watch?v=6VGNmuTz_Xc)
 
 Homebridge Plugin is in a form of NodeJS Module so the first step is to creat a module. Homebridge only searches module with name starting with "homebridge-" and checks the keyword section of package.json file; the keyword should be homebridge-plugin.
 
@@ -212,3 +213,195 @@ volume.prototype = {
 ```
 
 Now restart homebridge and open your iphone. Voila! You see two lightbulb accessories in your home app.
+
+[Tutorial Video #3 Summary (Korean Language)](https://www.youtube.com/watch?v=0RXLRLWBckM)
+
+
+## Event Handling
+
+[Tutorial Video #4 Event Handler (Korean Language)](https://youtube.com/o55oAZ8x4vg)
+
+**User Scenario Specification**
+
+Before we write up any code in event handler, we have to define what to implement. Sometimes people are not patient and rush into coding but this will make things complicated unless you are lucky. Knowing what you will code is very important.
+
+Here is what I defined as use cases.
+
+(1) User tap lightbulb tile to mute or unmute the speaker
+* lightbulb off -> volume becomes zero
+* lightbulb on -> volume becomes defaultVolume
+
+(2) User slide lightbulb slidebar to between 0~100
+* brightness set to x % -> volume becomes x
+
+For the first use case, we make use of ON Characteristics. For the next one, we do of Brightness Characteristics.
+
+**Homekit Callback Scenarios**
+
+(1) Homekit UI update (eg. open home app, etc)
+* On Characteristic -> Get
+* Brightness Characteristic -> Get
+
+(2) Tile toggle
+* Brightness Characteristic -> Set 100%
+* On Characteristic -> Set True
+
+(3) Slider change
+* Brightness Characteristic -> Set x %
+* On Characteristic -> Set x (True if x>0, False otherwise)
+
+**Volume Control Code**
+
+How to adjust volume of a speaker device depends on the hardware. Some speaker does not have this capability at all; some can be impelmented very easily whereas some can't. For this reason, I'll not go in details about this.
+
+In my case, I have Sonos's system in my living room. There are plenty of libraries and sources codes that works for chaning volume with Sonos. Since my preferred language is Python and I have no idea of NodeJS, I am forced to code Python to control my Speaker. So my plugin (NodeJS) has to call my Python code and I think the most elegant way is to utilize [REST](https://en.wikipedia.org/wiki/Representational_state_transfer).
+
+Long story short, I need to code the following in NodeJS for given tasks.
+* HTTP POST to http://127.0.0.1:5000/volume with  volume data "volume":xx will change the volume to xx.
+* HTTP GET from http://127.0.0.1:5000/volume will return current volume information
+
+## Coding to Complete
+
+**Add Brightness Slider**
+
+Just like we added On Characteristic, Adding a Brightness Characteristic of bulb service will add a slider to the UI.
+
+```js
+this.bulb.getCharacteristic(Characteristic.On)
+    .on("get", this.getPower.bind(this))
+    .on("set", this.setPower.bind(this));
+this.bulb.getCharacteristic(Characteristic.Brightness)
+    .on("get", this.getVolume.bind(this))
+    .on("set", this.setVolume.bind(this));
+```
+
+**Getting Power State and Volume**
+
+According to my experiment, get brightness is always called after get power state. We impelment speaker volume reading in get power state using http module. The HW volume data is stored as this.vol and getPower reports this.vol>0 to homebridge.
+
+Soon after getPower is called, getVolume is called. Since this.vol is already updated, the function simply reports this.vol value.
+
+```js
+getPower: function(callback) {
+        this.log('getPower');
+
+        // read speaker volume info
+        let req = http.get('http://localhost:5000/volume', res => {
+            let recv_data = '';
+            res.on('data', chunk => { recv_data += chunk});
+            res.on('end', () => {
+                // recv_data contains volume info.
+                let vol = JSON.parse(recv_data).volume; // vol = [0,100]
+                this.log('Read from Sonos; volume: ' + vol);
+                this.vol = vol;
+
+                callback(null, this.vol > 0);
+            });
+        });
+        req.on('error', err => {
+            this.log("Error in getPower: "+ err.message);
+            callback(err);
+        })
+    },
+getVolume: function (callback) {
+        this.log('getVolume')
+
+        // callback with volume read in getPower
+        callback(null,this.vol)
+    },
+```
+**Setting Power State and Volume**
+
+User's toggle and slide actions should be distinguished because both actions will cause setPower event. From experiment, assuming that setPower is always called after setVolume is fair. So in setVolume, we define a variable (triggeredby) to indicate that setVolume is just called. In setPower, the variable is checked so if setVolume is called right before, it will use the volume from UI to adjust HW. If not, it is from tile UI, which is toggling, the volume is either set to 0 or defaultValue.
+
+The HW adjustment is again via http module. 
+
+After sending a command to speaker HW in setPower, UI update is called. UI update function asks homekit UI to be updated after 100ms delay. This is necessary because upon toggling on action, homekit UI assumes 100% brightness; the actual HW volume is not 100% but UI thinks it is 100%. The 100ms is enough to wait until homekit change the UI to 100%, and our update code will ask UI change to the right value.
+
+```js
+setPower: function(on, callback) {
+        let new_vol;
+        if(this.triggeredby=='slider') {
+            this.log('setPower triggered by slider')
+            new_vol = this.vol;
+            delete this.triggeredby;
+        } else {
+            this.log('setPower ' + on)
+            new_vol = on ? this.defaultVolume : 0;
+        }
+
+        let toSend = '{"volume": ' + new_vol + '}';
+        let options = {
+            host: 'localhost',
+            port: 5000,
+            path: '/volume',
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Content-Length': toSend.length
+            }
+        }
+
+        let req = http.request(options, res => {
+            let recv_data = '';
+            res.on('data', chunk => {recv_data += chunk})
+        });
+
+        req.on('error', err=>{
+            this.log('Error in setPower:' + err.message);
+            callback(err);
+        });
+
+        req.end(toSend)
+        this.log('Request sent to set volume to ' + new_vol)
+        this.vol = new_vol;
+
+        this.updateUI();
+                
+        callback(null);
+    },
+    setVolume: function (vol, callback) {
+        if(vol==100) {callback(null); return;}
+        this.log('setVolume ' + vol);
+
+        this.vol = vol;
+        this.triggeredby = 'slider';
+
+        callback(null);
+    },
+    updateUI: function () {
+        setTimeout( () => {
+            this.bulb.getCharacteristic(Characteristic.Brightness).updateValue(this.vol);
+            this.bulb.getCharacteristic(Characteristic.On).updateValue(this.vol>0);
+        }, 100);
+    }
+```
+
+**Polling**
+
+If an external non-homkit device changes the volume of speaker HW, homekit never knows. In this case, homekit UI and our plugin shall have wrong information. For this reason, I implemented a polling mechanism, which checks the volume of speaker HW per every 1 sec and update the UI.
+
+```js
+function volume(log, config, api) {
+    // ... existing codes
+    if (this.config.refreshInterval)
+        this.refreshInterval = this.config.refreshInterval;
+    else
+        this.refreshInterval = 1000;
+    this.timer = setTimeout(this.poll.bind(this), this.refreshInterval);
+}
+
+poll: function() {
+        if(this.timer) clearTimeout(this.timer);
+        this.timer = null;
+
+        // volume update from Sonos
+        this.getPower( (err, poweron) => {  //this.vol updated.
+            // update UI
+            this.updateUI();
+        });
+
+        this.timer = setTimeout(this.poll.bind(this), this.refreshInterval)
+    }
+```
+
