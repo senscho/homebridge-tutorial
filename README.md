@@ -25,7 +25,7 @@ module.exports = function (homebridge) {
 };
 ```
 
-packages.json
+package.json
 ```json
 {
   "name": "homebridge-tutorial",
